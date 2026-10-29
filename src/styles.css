@@ -41,9 +41,9 @@ td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:middle}tr
 .qa{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .qa button{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:10px;font:inherit;font-weight:600;cursor:pointer}
 .qa button svg{flex:none;width:34px;height:34px;padding:8px;border-radius:6px;background:var(--red);color:#fff}
-.top ol{list-style:none;padding:0;display:flex;flex-direction:column;gap:12px}
-.top li{display:flex;align-items:center;gap:12px}.top li span{flex:1;font-weight:500}.top li em{font-style:normal;color:var(--mut)}.top li b{min-width:90px;text-align:right}
-ol.top{counter-reset:n}ol.top li::before{counter-increment:n;content:counter(n)'.';color:var(--mut)}
+.toplist{list-style:none;padding:0;display:flex;flex-direction:column;gap:12px}
+.toplist li{display:flex;align-items:center;gap:12px}.toplist li span{flex:1;font-weight:500}.toplist li em{font-style:normal;color:var(--mut)}.toplist li b{min-width:90px;text-align:right}
+ol.toplist{counter-reset:n}ol.toplist li::before{counter-increment:n;content:counter(n)'.';color:var(--mut)}
 @media(max-width:1100px){.shell{grid-template-columns:1fr}.side{display:none}.kpis{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.span2{grid-column:auto}}
 .btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;background:var(--red);color:#fff;border:0;border-radius:8px;padding:11px 18px;font:inherit;font-weight:600;cursor:pointer}.btn:disabled{opacity:.6}
 .login{min-height:100vh;display:grid;place-items:center;background:var(--bg)}
@@ -137,3 +137,80 @@ main{min-width:0}.top{min-width:0}.search{min-width:0}.search input{min-width:0;
 .msgbody{padding:0 16px 16px}.msgbody p{white-space:pre-wrap;word-break:break-word;margin-bottom:14px;line-height:1.5}
 .msgbody .tools{margin-bottom:0}.btn{text-decoration:none}
 @media(max-width:700px){.msgbody .tools .btn{width:100%}.msghead{grid-template-columns:1fr}.msghead .when{order:2}}
+/* ---- cancel and audit ---- */
+.st.cancelled{background:#ececf0;color:#55555c;text-decoration:line-through}
+.cancelbox{background:#fff7f7;border:1px solid #f3c9cd;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;line-height:1.5}
+.cancelbox label{display:flex;flex-direction:column;gap:5px;font-weight:500}.cancelbox .chk{flex-direction:row;align-items:center;gap:8px}.cancelbox .chk input{width:auto}.cancelbox .tools{margin:0}
+.btn.danger{background:#b4141f}.btn.ghost.danger{background:#fff;color:#b4141f;border:1px solid #f3c9cd}
+.tag.risk{background:var(--red)}td.wrap{white-space:normal;min-width:240px}
+/* ---- product photo gallery editor ---- */
+.photos{display:flex;flex-direction:column;gap:6px}
+.pgallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;margin-top:4px}
+.pphoto{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;aspect-ratio:1}
+.pphoto img{width:100%;height:100%;object-fit:cover;display:block}
+.pphoto .mk,.pphoto .mainbadge{position:absolute;left:6px;bottom:6px;font-size:11px;font-weight:600;border-radius:99px;padding:3px 9px;border:0}
+.pphoto .mk{background:rgba(17,17,20,.78);color:#fff;cursor:pointer}.pphoto .mainbadge{background:var(--red);color:#fff}
+.pphoto .rm{position:absolute;top:6px;right:6px;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;border:0;background:rgba(255,255,255,.92);cursor:pointer;color:var(--ink)}.pphoto .rm:hover{color:var(--red)}
+.addphoto{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed var(--line);border-radius:10px;aspect-ratio:1;cursor:pointer;color:var(--mut);font-weight:500;text-align:center}.addphoto:hover{border-color:var(--red);color:var(--red)}
+/* ---- broadcast ---- */
+.bcbox{margin-bottom:16px;display:flex;flex-direction:column;gap:10px}.bcbox label{display:flex;flex-direction:column;gap:5px;font-weight:500}
+.confirmbox{background:#fff7f7;border:1px solid #f3c9cd;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}.confirmbox p{margin:0}.confirmbox .tools{margin:0}
+.confirmbox .preview{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-word}
+.okmsg{color:#15803d;font-weight:600}
+.thankbox{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}.thankbox label{display:flex;flex-direction:column;gap:5px;font-weight:500}.thankbox .chk{flex-direction:row;align-items:center;gap:8px}.thankbox .chk input{width:auto}
+.thankbox .preview{background:var(--bg);border-radius:8px;padding:10px;margin:0;word-break:break-word}
+
+/* ---- layout fixes: nothing may be wider than its container ---- */
+body{overflow-x:hidden}
+.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid>*,.stack>*,.card{min-width:0}
+.card{overflow-x:auto}
+.chartwrap{width:100%;min-width:0;overflow:hidden}.chart{display:block;width:100%;height:auto}
+.toplist li{flex-wrap:wrap}.toplist li span{min-width:120px;word-break:break-word}.toplist li b{margin-left:auto}
+@media(max-width:1500px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}.span2,.catscard{grid-column:1/-1}
+  .stack{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+}
+@media(max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}.stack{grid-template-columns:minmax(0,1fr)}.kpis,.chips{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.grid.rep{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:1100px){.grid.rep{grid-template-columns:minmax(0,1fr)}}
+/* KPI cards: the little trend line sits under the numbers instead of on top of them */
+.spark{position:static;display:block;width:100%;height:34px;margin-top:8px}
+.kv{font-size:clamp(19px,2.2vw,27px);overflow-wrap:anywhere}
+.kd{flex-wrap:wrap}
+/* Popup dialogs (replace the browser's alert and confirm) and the report preview */
+.dlg{z-index:50}
+.dlgbox{width:420px;max-width:100%;display:flex;flex-direction:column;gap:12px;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.dlgmsg{color:#44444c;line-height:1.5;white-space:pre-line}
+.dlgbtns{justify-content:flex-end;margin:6px 0 0}
+.prevbox{width:960px;max-width:100%;max-height:calc(100vh - 32px);display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.prevbox .tbl{overflow:auto;border:1px solid var(--line);border-radius:8px;flex:1;min-height:120px}
+.prevbox table{width:100%}.prevbox th{position:sticky;top:0;background:var(--bg);z-index:1;white-space:nowrap}
+.prevhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.prevhead button.x{background:none;border:0;cursor:pointer;color:var(--mut);padding:4px}
+.chkcol{width:36px}.chkcol input{width:auto}
+/* Report preview on phones: keep a real table that scrolls sideways (undo the stacked-card table rule) */
+.prevbox{min-width:0;overflow:hidden}
+.prevbox .tbl{overflow:auto;-webkit-overflow-scrolling:touch}
+.prevbox table{display:table;width:max-content;min-width:100%}
+.prevbox thead{display:table-header-group}
+.prevbox tbody{display:table-row-group}
+.prevbox tr{display:table-row;border:0;border-radius:0;padding:0;margin:0;background:none}
+.prevbox th,.prevbox td{display:table-cell!important;width:auto;white-space:nowrap;text-align:left;padding:8px 12px!important;border-bottom:1px solid var(--line)!important}
+.prevbox td::before{content:none!important}
+@media(max-width:700px){
+  .prevbox{padding:14px;max-height:calc(100dvh - 24px)}
+  .prevbox .dlgbtns{flex-direction:row;justify-content:stretch}
+  .prevbox .dlgbtns .btn{flex:1}
+  .dlgbox{padding:16px}
+  .dlgbtns{flex-direction:row;justify-content:flex-end}
+}
+.dlg{grid-template-columns:minmax(0,1fr)}
+.prevbox{width:min(960px,calc(100vw - 32px))}.dlgbox{width:min(420px,calc(100vw - 32px))}
+.dlg>.card{justify-self:center}
+/* Branch banner under the top bar */
+.branchbar{display:flex;align-items:center;gap:10px;padding:8px 24px;background:#fff;border-bottom:1px solid var(--line);font-size:13px;color:#44444c}
+.branchbar svg{color:var(--red);flex:none}.branchbar button{margin-left:auto;background:none;border:0;color:var(--red);font:inherit;font-weight:600;cursor:pointer}
+.branchbar.away{background:#fff4f4;border-bottom-color:#f3c9cd}
+@media(max-width:700px){.branchbar{padding:8px 14px}}
+.act .btn{background:var(--red);color:#fff;padding:7px 12px}.act .btn:hover{color:#fff}
+.act .linkbtn{color:var(--red);padding:6px}

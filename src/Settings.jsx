@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import PasswordInput from './PasswordInput.jsx'
 
-const fields = [['store_name', 'Store name'], ['phone', 'Call number'], ['whatsapp', 'WhatsApp number'], ['address', 'Store address'], ['map_url', 'Google Maps link'], ['delivery_note', 'Delivery note shown at checkout'], ['receipt_footer', 'Message printed at the bottom of receipts']]
+const fields = [['store_name', 'Store name'], ['phone', 'Call number'], ['whatsapp', 'WhatsApp number'], ['address', 'Store address'], ['map_url', 'Google Maps link'], ['email', 'Store email'], ['facebook', 'Facebook page link'], ['instagram', 'Instagram link'], ['tiktok', 'TikTok link'], ['delivery_note', 'Delivery note shown at checkout'], ['receipt_footer', 'Message printed at the bottom of receipts'], ['sms_sender_id', 'SMS sender name (3 to 11 letters or numbers, approved by your SMS provider)']]
 export default function Settings({ email, name, onName }) {
   const [nm, setNm] = useState(name || ''), [nmsg, setNmsg] = useState('')
   const [f, setF] = useState(null), [msg, setMsg] = useState(''), [pw, setPw] = useState(''), [pmsg, setPmsg] = useState('')

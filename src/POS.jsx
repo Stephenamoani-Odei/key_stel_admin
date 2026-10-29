@@ -3,13 +3,14 @@ import { Search, Plus, Minus, Trash2, Printer } from 'lucide-react'
 import { supabase } from './supabase.js'
 import { money } from './lib.js'
 import Receipt, { printReceipt } from './Receipt.jsx'
+import { callBroadcast, normGhana } from './sms.js'
 
 const METHODS = ['Cash', 'MoMo', 'Card']
 const blank = { name: '', phone: '', method: 'Cash', discount: '', received: '', note: '' }
 
 export default function POS({ onDone }) {
   const [products, setProducts] = useState([]), [q, setQ] = useState(''), [cart, setCart] = useState([]), [f, setF] = useState(blank)
-  const [settings, setSettings] = useState(null), [today, setToday] = useState([]), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [done, setDone] = useState(null)
+  const [settings, setSettings] = useState(null), [today, setToday] = useState([]), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [done, setDone] = useState(null), [smsNote, setSmsNote] = useState('')
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
   async function load() {
@@ -17,13 +18,14 @@ export default function POS({ onDone }) {
     const [p, s, t] = await Promise.all([
       supabase.from('products').select('id,name,price,stock,images').order('name'),
       supabase.from('settings').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('orders').select('total,payment_type').eq('channel', 'walk-in').gte('created_at', start.toISOString()),
+      supabase.from('orders').select('total,payment_type').eq('channel', 'walk-in').neq('status', 'Cancelled').gte('created_at', start.toISOString()),
     ])
     if (p.error) setErr(p.error.message)
     setProducts(p.data || []); setSettings(s.data); setToday(t.data || [])
   }
   useEffect(() => { load() }, [])
 
+  const needPhone = !!settings && 'thank_you_enabled' in settings && settings.thank_you_enabled !== false && settings.require_sale_phone !== false
   const shown = useMemo(() => products.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())), [products, q])
   const add = (p) => setCart((c) => {
     const ex = c.find((l) => l.id === p.id)
@@ -43,6 +45,7 @@ export default function POS({ onDone }) {
   async function complete() {
     setErr('')
     if (!cart.length) return setErr('Add at least one door to the sale.')
+    if (needPhone && !normGhana(f.phone)) return setErr("Enter the customer's Ghana mobile number (for example 0241234567) so they receive their thank-you message.")
     if (cashShort) return setErr('Cash received is less than the total.')
     setBusy(true)
     const { data: id, error } = await supabase.rpc('record_walkin_sale', {
@@ -52,7 +55,11 @@ export default function POS({ onDone }) {
     })
     if (error) { setBusy(false); return setErr(error.message) }
     const { data: order } = await supabase.from('orders').select('*, order_items(qty,unit_price,products(name))').eq('id', id).single()
+    const hasPhone = !!normGhana(f.phone)
     setBusy(false); setDone(order); setCart([]); setF(blank); load(); onDone?.()
+    // The database queues the customer's thank-you message; this sends it right away.
+    setSmsNote(hasPhone ? 'Sending a thank-you message to the customer...' : 'No phone number was entered, so no thank-you message was sent.')
+    if (hasPhone) callBroadcast(supabase, { mode: 'flush' }).then((r) => setSmsNote(!r.ok ? `The thank-you message has not gone yet: ${r.error}` : r.sent > 0 ? 'Thank-you message sent to the customer.' : ''))
   }
 
   if (done) return (
@@ -60,9 +67,10 @@ export default function POS({ onDone }) {
       <div className="head"><div><h1>Sale recorded</h1><p>Stock has been updated. Print the receipt for the customer.</p></div></div>
       <div className="card" style={{ maxWidth: 420 }}>
         <Receipt order={done} settings={settings} />
+        {smsNote && <p style={{ marginTop: 10 }}><small>{smsNote}</small></p>}
         <div className="tools" style={{ justifyContent: 'center', marginTop: 12 }}>
           <button className="btn" onClick={() => printReceipt(done, settings)}><Printer size={16} /> Print receipt</button>
-          <button className="btn ghost" onClick={() => setDone(null)}>New sale</button>
+          <button className="btn ghost" onClick={() => { setDone(null); setSmsNote('') }}>New sale</button>
         </div>
       </div>
     </section>
@@ -103,7 +111,7 @@ export default function POS({ onDone }) {
             </div>))}
 
           <div className="sheet" style={{ width: 'auto', marginTop: 12 }}>
-            <div className="two"><label>Customer name (optional)<input value={f.name} onChange={set('name')} /></label><label>Phone (optional)<input value={f.phone} onChange={set('phone')} /></label></div>
+            <div className="two"><label>Customer name (optional)<input value={f.name} onChange={set('name')} /></label><label>Phone{needPhone ? ' (needed for the thank-you SMS)' : ' (optional)'}<input type="tel" placeholder="0241234567" value={f.phone} onChange={set('phone')} /></label></div>
             <label>Payment method<div className="methods">{METHODS.map((m) => <button type="button" key={m} className={f.method === m ? 'on' : ''} onClick={() => setF({ ...f, method: m })}>{m}</button>)}</div></label>
             <div className="two"><label>Discount (GH₵)<input type="number" min="0" step="0.01" value={f.discount} onChange={set('discount')} /></label>
               {f.method === 'Cash' && <label>Cash received<input type="number" min="0" step="0.01" value={f.received} onChange={set('received')} /></label>}</div>

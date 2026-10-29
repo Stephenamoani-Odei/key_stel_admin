@@ -1,16 +1,26 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Download, MessageCircle, Phone } from 'lucide-react'
+import { BellOff, Bell, Download, MessageCircle, Phone } from 'lucide-react'
 import { supabase } from './supabase.js'
 import { money, dateTime, downloadCSV } from './lib.js'
+import { normGhana } from './sms.js'
+import Broadcast from './Broadcast.jsx'
 
 const digits = (p) => (p || '').replace(/\D/g, '')
 const waLink = (p) => { let d = digits(p); if (d.startsWith('0')) d = '233' + d.slice(1); return d ? `https://wa.me/${d}` : null }
 
-export default function Customers() {
-  const [orders, setOrders] = useState([]), [q, setQ] = useState(''), [open, setOpen] = useState(null), [err, setErr] = useState(''), [loading, setLoading] = useState(true)
+export default function Customers({ go }) {
+  const [orders, setOrders] = useState([]), [q, setQ] = useState(''), [open, setOpen] = useState(null), [err, setErr] = useState(''), [loading, setLoading] = useState(true), [optouts, setOptouts] = useState(new Set())
+  useEffect(() => { supabase.from('sms_optout').select('phone').then(({ data }) => setOptouts(new Set((data || []).map((r) => r.phone)))) }, [])
+  async function toggleOptout(c) {
+    const n = normGhana(c.phone); if (!n) return
+    const out = !optouts.has(n)
+    const { error } = await supabase.rpc('set_sms_optout', { p_phone: c.phone, p_optout: out })
+    if (error) return setErr(error.message)
+    setOptouts((s) => { const x = new Set(s); out ? x.add(n) : x.delete(n); return x })
+  }
   useEffect(() => {
     supabase.from('orders').select('id,customer_name,phone,address,total,status,payment_type,payment_status,channel,created_at')
-      .order('created_at', { ascending: false }).limit(5000)
+      .neq('status', 'Cancelled').order('created_at', { ascending: false }).limit(5000)
       .then(({ data, error }) => { if (error) setErr(error.message); setOrders(data || []); setLoading(false) })
   }, [])
 
@@ -42,7 +52,8 @@ export default function Customers() {
     <section className="page">
       <div className="head"><div><h1>Customers</h1><p>Everyone who has bought from you, built from your orders.</p></div>
         <button className="btn ghost" onClick={exportCsv} disabled={!customers.length}><Download size={16} /> Download CSV</button></div>
-      <div className="chips">
+      <Broadcast go={go} />
+      <div className="chips" style={{ marginTop: 16 }}>
         <div className="card"><small>Customers</small><div className="kv">{customers.length}</div></div>
         <div className="card"><small>Repeat customers</small><div className="kv">{repeat}</div></div>
         <div className="card"><small>Bought online</small><div className="kv">{customers.filter((c) => c.online).length}</div></div>
@@ -55,11 +66,12 @@ export default function Customers() {
           <table><thead><tr><th>Customer</th><th>Phone</th><th>Orders</th><th>Total spent</th><th>Last order</th><th>Contact</th></tr></thead><tbody>{shown.map((c) => (
             <Fragment key={c.key}>
               <tr className="click" onClick={() => setOpen(open === c.key ? null : c.key)}>
-                <td><b>{c.name}</b>{c.online > 0 && <span className="tag">Online</span>}{c.shop > 0 && <span className="tag">Shop</span>}</td>
+                <td><b>{c.name}</b>{c.online > 0 && <span className="tag">Online</span>}{c.shop > 0 && <span className="tag">Shop</span>}{optouts.has(normGhana(c.phone)) && <span className="tag risk">No messages</span>}</td>
                 <td>{c.phone || 'None'}</td><td>{c.orders.length}</td><td>{money(c.spent)}</td><td>{dateTime(c.orders[0].created_at)}</td>
                 <td className="act" onClick={(e) => e.stopPropagation()}>
                   {c.phone && <a className="iconlink" href={`tel:${digits(c.phone)}`} aria-label="Call" title="Call"><Phone size={16} /></a>}
                   {waLink(c.phone) && <a className="iconlink" href={waLink(c.phone)} target="_blank" rel="noreferrer" aria-label="WhatsApp" title="WhatsApp"><MessageCircle size={16} /></a>}
+                  {normGhana(c.phone) && <button className="iconlink" onClick={() => toggleOptout(c)} aria-label="Stop or allow broadcast messages" title={optouts.has(normGhana(c.phone)) ? 'Allow broadcast messages again' : 'Do not send broadcast messages to this customer'}>{optouts.has(normGhana(c.phone)) ? <Bell size={16} /> : <BellOff size={16} />}</button>}
                 </td>
               </tr>
               {open === c.key && <tr><td colSpan="6" className="detail">

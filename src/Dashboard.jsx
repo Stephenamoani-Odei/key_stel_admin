@@ -36,7 +36,7 @@ export function SalesChart({ days }) {
   const y = (v) => H - B - (v / top) * (H - B - 10)
   const line = days.map((s, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(s.rev)).join(' ')
   return (
-    <div ref={ref}><svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="chart" role="img" aria-label="Sales chart">
+    <div ref={ref} className="chartwrap"><svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label="Sales chart">
       {[0, .25, .5, .75, 1].map((f) => <g key={f}><line x1={L} x2={W - 20} y1={y(top * f)} y2={y(top * f)} stroke="#ececf0" /><text x={L - 8} y={y(top * f) + 4} textAnchor="end" className="tick">{Math.round(top * f).toLocaleString()}</text></g>)}
       <path d={`${line} L${x(days.length - 1)} ${y(0)} L${x(0)} ${y(0)} Z`} fill="var(--red)" opacity=".08" />
       <path d={line} fill="none" stroke="var(--red)" strokeWidth="2" />
@@ -64,7 +64,7 @@ export default function Dashboard({ go }) {
       const start = new Date(); start.setHours(0, 0, 0, 0)
       const from = new Date(start - 13 * DAY)
       const [o, p] = await Promise.all([
-        supabase.from('orders').select('id,customer_name,total,payment_type,status,created_at,order_items(qty,unit_price,products(name,images,categories(name,group_name)))').gte('created_at', from.toISOString()).order('created_at', { ascending: false }),
+        supabase.from('orders').select('id,customer_name,total,payment_type,status,created_at,order_items(qty,unit_price,products(name,images,categories(name,group_name)))').neq('status', 'Cancelled').gte('created_at', from.toISOString()).order('created_at', { ascending: false }),
         supabase.from('products').select('stock,low_stock_threshold'),
       ])
       if (o.error || p.error) return setState({ error: (o.error || p.error).message })
@@ -116,7 +116,7 @@ export default function Dashboard({ go }) {
         </div>) })}</div>
       <div className="grid">
         <div className="card span2"><div className="ch"><h2><BarChart3 size={18} /> Sales Overview</h2></div><SalesChart days={days} /></div>
-        <div className="card"><div className="ch"><h2>Best Selling Categories</h2></div>
+        <div className="card catscard"><div className="ch"><h2>Best Selling Categories</h2></div>
           {soldNow ? <div className="cats"><Donut cats={cats} total={soldNow} /><ul>{cats.map((k, i) => <li key={k.name}><i style={{ background: COLORS[i] }} />{k.name}<b>{Math.round((k.units / soldNow) * 100)}%</b></li>)}</ul></div> : <p className="empty">No doors sold in this period yet.</p>}
         </div>
         <div className="card span2"><div className="ch"><h2>Recent Orders</h2><a href="#" className="lnk" onClick={(e) => { e.preventDefault(); go('Orders') }}>View all orders</a></div>
@@ -130,7 +130,7 @@ export default function Dashboard({ go }) {
           <button onClick={() => go('Reports')}><FileText size={18} /><span>View Reports<small>Download sales reports</small></span></button>
           <button onClick={() => go('Reports')}><Download size={18} /><span>Export Data<small>CSV / Excel export</small></span></button></div></div>
         <div className="card"><div className="ch"><h2>Top Products</h2><a href="#" className="lnk" onClick={(e) => { e.preventDefault(); go('Products') }}>View all products</a></div>
-          {top.length ? <ol className="top">{top.map((p) => <li key={p.name}><span>{p.name}<small>{p.cat}</small></span><em>{p.units} units</em><b>{money(p.revenue)}</b></li>)}</ol> : <p className="empty">Your best sellers will show here once orders come in.</p>}
+          {top.length ? <ol className="toplist">{top.map((p) => <li key={p.name}><span>{p.name}<small>{p.cat}</small></span><em>{p.units} units</em><b>{money(p.revenue)}</b></li>)}</ol> : <p className="empty">Your best sellers will show here once orders come in.</p>}
         </div></div>
       </div>
     </section>

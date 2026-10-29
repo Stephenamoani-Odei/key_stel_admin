@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle, Phone, Trash2 } from 'lucide-react'
 import { supabase } from './supabase.js'
+import { useDialog } from './Dialog.jsx'
 import { dateTime } from './lib.js'
 
 const digits = (p) => (p || '').replace(/\D/g, '')
 const waLink = (p, text) => { let d = digits(p); if (d.startsWith('0')) d = '233' + d.slice(1); return d ? `https://wa.me/${d}?text=${encodeURIComponent(text)}` : null }
 
 export default function Messages({ onChange }) {
+  const { confirm } = useDialog()
   const [rows, setRows] = useState([]), [tab, setTab] = useState('All'), [open, setOpen] = useState(null), [err, setErr] = useState(''), [loading, setLoading] = useState(true)
   useEffect(() => {
     supabase.from('inquiries').select('*').order('created_at', { ascending: false }).limit(500)
@@ -18,7 +20,7 @@ export default function Messages({ onChange }) {
     setRows((r) => r.map((x) => (x.id === m.id ? { ...x, is_read } : x))); onChange?.()
   }
   async function remove(m) {
-    if (!confirm(`Delete the message from ${m.name}?`)) return
+    if (!(await confirm({ title: 'Delete this message?', message: `The message from ${m.name} will be deleted.`, yes: 'Delete', danger: true }))) return
     const { error } = await supabase.from('inquiries').delete().eq('id', m.id)
     if (error) return setErr(error.message)
     setRows((r) => r.filter((x) => x.id !== m.id)); onChange?.()

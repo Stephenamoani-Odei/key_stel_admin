@@ -34,7 +34,7 @@ export function receiptHTML(o, s = {}) {
     <div class="row tot"><span>TOTAL</span><span>${money(o.total)}</span></div>
     <div class="row"><span>Payment</span><span>${esc(o.payment_type)}</span></div>
     ${cash ? `<div class="row"><span>Cash received</span><span>${money(o.amount_paid)}</span></div><div class="row"><span>Change</span><span>${money(o.amount_paid - o.total)}</span></div>` : ''}
-    <div class="row"><span>Status</span><b>${paid ? 'PAID' : 'NOT YET PAID'}</b></div>
+    <div class="row"><span>Status</span><b>${o.status === 'Cancelled' ? 'CANCELLED' : paid ? 'PAID' : 'NOT YET PAID'}</b></div>${o.status === 'Cancelled' && o.refund_amount > 0 ? `<div class="row"><span>Refunded</span><span>${money(o.refund_amount)}</span></div>` : ''}
     <hr><div class="c">${esc(s.receipt_footer || 'Thank you for shopping with Key-Stel.')}</div>
   </div>`
 }

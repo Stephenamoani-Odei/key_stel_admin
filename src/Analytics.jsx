@@ -11,7 +11,7 @@ export default function Analytics() {
     setD(null);
     (async () => {
       const start = new Date(); start.setHours(0, 0, 0, 0)
-      const { data, error } = await supabase.from('orders').select('total,payment_type,created_at,order_items(qty,unit_price,products(name,categories(name,group_name)))').gte('created_at', new Date(+start - (n - 1) * DAY).toISOString())
+      const { data, error } = await supabase.from('orders').select('total,payment_type,created_at,order_items(qty,unit_price,products(name,categories(name,group_name)))').neq('status', 'Cancelled').gte('created_at', new Date(+start - (n - 1) * DAY).toISOString())
       if (error) return setErr(error.message)
       const days = Array.from({ length: n }, (_, i) => { const day = new Date(+start - (n - 1 - i) * DAY); return { key: day.toDateString(), label: fmt(day, { month: 'short', day: 'numeric' }), rev: 0 } })
       const idx = Object.fromEntries(days.map((x, i) => [x.key, i]))

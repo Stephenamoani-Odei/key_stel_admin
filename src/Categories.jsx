@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Pencil, Trash2, Check } from 'lucide-react'
 import { supabase } from './supabase.js'
+import { useDialog } from './Dialog.jsx'
 
 const groups = ['Security & Entrance Doors', 'Specialty & Architectural', 'Interior & Utility Doors']
 
 export default function Categories() {
+  const { confirm } = useDialog()
   const [rows, setRows] = useState([]), [name, setName] = useState(''), [group, setGroup] = useState('')
   const [edit, setEdit] = useState(null), [err, setErr] = useState(''), [loading, setLoading] = useState(true)
   async function load() {
@@ -24,7 +26,7 @@ export default function Categories() {
     setEdit(null); load()
   }
   async function remove(c) {
-    if (!confirm(`Delete ${c.name}? Its products will become uncategorised.`)) return
+    if (!(await confirm({ title: 'Delete this category?', message: `${c.name} will be deleted and its products will become uncategorised.`, yes: 'Delete', danger: true }))) return
     const { error } = await supabase.from('categories').delete().eq('id', c.id)
     if (error) setErr(error.message); else load()
   }

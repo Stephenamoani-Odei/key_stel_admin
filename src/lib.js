@@ -19,3 +19,5 @@ export async function resizeImage(file, max = 1200) {
     return blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file
   } catch { return file }
 }
+export const digits = (p) => (p || '').replace(/\D/g, '')
+export const waLink = (p) => { let d = digits(p); if (d.startsWith('0')) d = '233' + d.slice(1); return d ? `https://wa.me/${d}` : null }

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
-import { Home, Package, LayoutGrid, Boxes, ShoppingCart, BarChart3, FileText, Users, Settings as Cog, LogOut, Menu, Bell, Search, ChevronDown, UserRound, MessageSquare, Receipt as ReceiptIcon } from 'lucide-react'
+import { Home, Package, LayoutGrid, Boxes, ShoppingCart, BarChart3, FileText, Users, Settings as Cog, LogOut, Menu, Bell, Search, ChevronDown, UserRound, MessageSquare, History, Store, Receipt as ReceiptIcon } from 'lucide-react'
 import { supabase } from './supabase.js'
+import { callBroadcast } from './sms.js'
 import Login from './Login.jsx'
 import Dashboard from './Dashboard.jsx'
 import Products from './Products.jsx'
@@ -13,12 +14,14 @@ const Inventory = lazy(() => import('./Inventory.jsx'))
 const Orders = lazy(() => import('./Orders.jsx'))
 const Customers = lazy(() => import('./Customers.jsx'))
 const Messages = lazy(() => import('./Messages.jsx'))
+const Audit = lazy(() => import('./Audit.jsx'))
 const Analytics = lazy(() => import('./Analytics.jsx'))
 const Reports = lazy(() => import('./Reports.jsx'))
 const Staff = lazy(() => import('./Staff.jsx'))
 const Settings = lazy(() => import('./Settings.jsx'))
+const Branches = lazy(() => import('./Branches.jsx'))
 
-const NAV = [[Home, 'Overview'], [ReceiptIcon, 'Point of Sale'], [Package, 'Products'], [LayoutGrid, 'Categories'], [Boxes, 'Inventory'], [ShoppingCart, 'Orders'], [UserRound, 'Customers'], [MessageSquare, 'Messages'], [BarChart3, 'Sales & Analytics'], [FileText, 'Reports'], [Users, 'Staff & Access Control'], [Cog, 'Settings']]
+const NAV = [[Home, 'Overview'], [ReceiptIcon, 'Point of Sale'], [Package, 'Products'], [LayoutGrid, 'Categories'], [Boxes, 'Inventory'], [ShoppingCart, 'Orders'], [UserRound, 'Customers'], [MessageSquare, 'Messages'], [BarChart3, 'Sales & Analytics'], [FileText, 'Reports'], [Store, 'Branches'], [Users, 'Staff & Access Control'], [History, 'Audit Log'], [Cog, 'Settings']]
 
 function TopSearch({ go }) {
   const [q, setQ] = useState(''), [res, setRes] = useState(null)
@@ -50,7 +53,7 @@ function TopSearch({ go }) {
 export default function App() {
   const [session, setSession] = useState(undefined), [role, setRole] = useState(null), [pname, setPname] = useState(''), [must, setMust] = useState(false)
   const [nav, setNav] = useState({ page: 'Overview', q: '', startNew: false, n: 0 }), [menu, setMenu] = useState(false), [bell, setBell] = useState(false), [acct, setAcct] = useState(false)
-  const [alerts, setAlerts] = useState({ pending: 0, unread: 0, low: 0 })
+  const [alerts, setAlerts] = useState({ pending: 0, unread: 0, low: 0 }), [branch, setBranch] = useState(null)
   const go = (page, q = '', startNew = false) => { setNav((s) => ({ page, q, startNew, n: s.n + 1 })); setMenu(false); setBell(false); setAcct(false) }
 
   useEffect(() => {
@@ -81,8 +84,25 @@ export default function App() {
     if (!session) return setRole(null)
     supabase.from('staff').select('role,display_name,must_change_password').eq('user_id', session.user.id).maybeSingle().then(({ data }) => { setRole(data ? data.role : false); setPname(data?.display_name || ''); setMust(!!data?.must_change_password) })
   }, [session])
+  // The branch this person is working in. The super admin can switch it from the Branches page.
+  const loadBranch = useCallback(async () => {
+    const { data, error } = await supabase.rpc('my_branch')
+    setBranch(error ? null : data?.[0] || null)
+  }, [])
+  useEffect(() => { if (role) loadBranch(); else setBranch(null) }, [role, loadBranch])
+  async function openBranch(id) {
+    if (id != null) { const { error } = await supabase.rpc('open_branch', { p_id: id }); if (error) return error.message }
+    await loadBranch()
+    if (id != null) go('Overview')
+    return null
+  }
   const refresh = useCallback(async () => {
     const [o, p, u] = await Promise.all([supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'Pending'), supabase.from('products').select('stock,low_stock_threshold'), supabase.from('inquiries').select('id', { count: 'exact', head: true }).eq('is_read', false)])
+    // Thank-you messages that did not go out yet are sent now, at most once every 30 seconds.
+    supabase.from('sms_outbox').select('id', { count: 'exact', head: true }).eq('status', 'pending').then(({ count, error }) => {
+      const now = Date.now()
+      if (!error && count > 0 && now - (window.__lastFlush || 0) > 30000) { window.__lastFlush = now; callBroadcast(supabase, { mode: 'flush' }) }
+    })
     setAlerts({ pending: o.count || 0, unread: u.count || 0, low: (p.data || []).filter((x) => x.stock <= x.low_stock_threshold).length })
   }, [])
   useEffect(() => { if (!role) return; refresh(); const t = setInterval(refresh, 60000); return () => clearInterval(t) }, [role, nav.n, refresh])
@@ -95,7 +115,7 @@ export default function App() {
   if (must) return <ResetPassword title="Choose your own password" forbid="keyStel1234" onDone={async () => { await supabase.rpc('password_changed'); setMust(false) }} />
 
   const admin = role === 'admin' || role === 'superadmin', email = session.user.email, label = pname || email, P = nav.page
-  const items = NAV.filter(([, l]) => admin || l !== 'Staff & Access Control')
+  const items = NAV.filter(([, l]) => (admin || (l !== 'Staff & Access Control' && l !== 'Audit Log')) && (l !== 'Branches' || role === 'superadmin'))
   const alertCount = alerts.pending + (alerts.unread ? 1 : 0) + (alerts.low ? 1 : 0)
   return (
     <div className="shell">
@@ -132,18 +152,25 @@ export default function App() {
             </div>}
           </div>
         </header>
+        {branch && (
+          <div className={'branchbar' + (!branch.is_main && branch.can_switch ? ' away' : '')}>
+            <Store size={16} /><span>{branch.can_switch ? 'Managing:' : 'Branch:'} <b>{branch.name}</b></span>
+            {branch.can_switch && !branch.is_main && <button type="button" onClick={() => go('Branches')}>Switch branch</button>}
+          </div>)}
         <ErrorBoundary key={nav.n}><Suspense fallback={<section className="page"><p>Loading...</p></section>}>
           {P === 'Overview' && <Dashboard go={go} />}
           {P === 'Point of Sale' && <POS onDone={refresh} />}
           {P === 'Products' && <Products q={nav.q} startNew={nav.startNew} />}
           {P === 'Categories' && <Categories />}
           {P === 'Inventory' && <Inventory q={nav.q} />}
-          {P === 'Orders' && <Orders q={nav.q} onChange={refresh} />}
-          {P === 'Customers' && <Customers />}
+          {P === 'Orders' && <Orders q={nav.q} onChange={refresh} admin={admin} />}
+          {P === 'Customers' && <Customers go={go} />}
           {P === 'Messages' && <Messages onChange={refresh} />}
           {P === 'Sales & Analytics' && <Analytics />}
           {P === 'Reports' && <Reports />}
-          {P === 'Staff & Access Control' && admin && <Staff me={session.user.id} myRole={role} />}
+          {P === 'Branches' && role === 'superadmin' && <Branches onOpen={openBranch} />}
+          {P === 'Staff & Access Control' && admin && <Staff me={session.user.id} myRole={role} branch={branch} />}
+          {P === 'Audit Log' && admin && <Audit myRole={role} />}
           {P === 'Settings' && <Settings email={email} name={pname} onName={setPname} />}
         </Suspense></ErrorBoundary>
       </main>
